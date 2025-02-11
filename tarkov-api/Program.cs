@@ -10,27 +10,30 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
 
 builder.Services.AddControllers();
 
+builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
 // Add services
-builder.Services.AddScoped<IGetAchievementsService, GetAchievementsService>();
+builder.Services.AddTransient<IAchievementsService, AchievementsService>();
+builder.Services.AddTransient<ITarkovClient, TarkovClient>();
 
 
 var app = builder.Build();
 
-// Apply pending migrations on startup
-using (var scope = app.Services.CreateScope())
+// Create and migrate database
+using (var serviceScope = app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<DatabaseContext>();
+    var context = serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
     context.Database.Migrate();
+    context.SaveChanges();
 }
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.MapOpenApi();
+
     // Serve the Swagger JSON at /swagger/v1/swagger.json
     app.UseSwagger();
 
@@ -41,8 +44,6 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = string.Empty;  // Makes Swagger UI available at the root
     });
 }
-
-app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

@@ -12,8 +12,8 @@ using tarkov_api.Database;
 namespace tarkov_api.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250211205526_init")]
-    partial class init
+    [Migration("20250212143249_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -28,7 +28,6 @@ namespace tarkov_api.Migrations
             modelBuilder.Entity("tarkov_api.Database.Entities.AchievementEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")

@@ -25,7 +25,6 @@ namespace tarkov_api.Migrations
             modelBuilder.Entity("tarkov_api.Database.Entities.AchievementEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")

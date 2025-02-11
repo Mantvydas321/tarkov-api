@@ -10,3 +10,7 @@ public class AchievementDto
     public string Side { get; set; }
     public string Rarity { get; set; }
 }
+
+public class AchievementsApi {
+    public List<AchievementDto>? Achievements { get; set; }
+}
