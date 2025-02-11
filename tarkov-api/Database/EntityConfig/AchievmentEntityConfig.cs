@@ -16,6 +16,12 @@ public class AchievmentEntityConfig : IEntityTypeConfiguration<AchievmentEntity>
         
         builder.Property(x => x.Description).IsRequired();
         
-        builder.Property(x )
+        builder.Property(x => x.Hidden).IsRequired();
+        
+        builder.Property(x => x.PlayersCompletedPercentage).IsRequired();
+        
+        builder.Property(x => x.Side).IsRequired();
+        
+        builder.Property(x => x.Rarity).IsRequired();
     }
 }
