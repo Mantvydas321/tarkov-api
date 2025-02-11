@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using tarkov_api.Database;
+using tarkov_api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,8 +10,13 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
 
 builder.Services.AddControllers();
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+
+// Add services
+builder.Services.AddScoped<IGetAchievementsService, GetAchievementsService>();
+
 
 var app = builder.Build();
 
@@ -25,7 +31,15 @@ using (var scope = app.Services.CreateScope())
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    // Serve the Swagger JSON at /swagger/v1/swagger.json
+    app.UseSwagger();
+
+    // Serve Swagger UI at the root (http://localhost:5258/)
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+        options.RoutePrefix = string.Empty;  // Makes Swagger UI available at the root
+    });
 }
 
 app.UseHttpsRedirection();

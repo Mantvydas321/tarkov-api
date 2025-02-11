@@ -1,6 +1,6 @@
-namespace tarkov_api.Database.Entities;
+namespace tarkov_api.Data;
 
-public class AchievmentEntity
+public class AchievementDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; }

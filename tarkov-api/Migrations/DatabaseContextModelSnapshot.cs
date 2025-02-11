@@ -22,7 +22,7 @@ namespace tarkov_api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("tarkov_api.Database.Entities.AchievmentEntity", b =>
+            modelBuilder.Entity("tarkov_api.Database.Entities.AchievementEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -52,7 +52,7 @@ namespace tarkov_api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Achievments");
+                    b.ToTable("Achievements");
                 });
 #pragma warning restore 612, 618
         }

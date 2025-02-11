@@ -4,9 +4,9 @@ using tarkov_api.Database.Entities;
 
 namespace tarkov_api.Database.EntityConfig;
 
-public class AchievmentEntityConfig : IEntityTypeConfiguration<AchievmentEntity>
+public class AchievementEntityConfig : IEntityTypeConfiguration<AchievementEntity>
 {
-    public void Configure(EntityTypeBuilder<AchievmentEntity> builder)
+    public void Configure(EntityTypeBuilder<AchievementEntity> builder)
     {
         builder.HasKey(x => x.Id);
         
