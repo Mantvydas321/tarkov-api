@@ -1,6 +1,6 @@
 using GraphQL;
 using GraphQL.Client.Http;
-using GraphQL.Client.Serializer.Newtonsoft;
+using GraphQL.Client.Serializer.SystemTextJson;
 using Tarkov.API.Data;
 
 namespace Tarkov.API.Clients;
@@ -13,7 +13,7 @@ public class TarkovClient : ITarkovClient
     public TarkovClient(ILogger<TarkovClient> logger)
     {
         _logger = logger;
-        _client = new GraphQLHttpClient("https://api.tarkov.dev/graphql", new NewtonsoftJsonSerializer());
+        _client = new GraphQLHttpClient("https://api.tarkov.dev/graphql", new SystemTextJsonSerializer());
     }
     
     public async Task<List<AchievementDto>> GetSaveAchievements()
