@@ -12,8 +12,8 @@ using tarkov_api.Database;
 namespace tarkov_api.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250211152228_init")]
-    partial class init
+    [Migration("20250212143249_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,10 +25,9 @@ namespace tarkov_api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("tarkov_api.Database.Entities.AchievmentEntity", b =>
+            modelBuilder.Entity("tarkov_api.Database.Entities.AchievementEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")
@@ -55,7 +54,7 @@ namespace tarkov_api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Achievments");
+                    b.ToTable("Achievements");
                 });
 #pragma warning restore 612, 618
         }
