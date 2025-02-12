@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using tarkov_api.Database.Entities;
+using Tarkov.API.Database.Entities;
 
-namespace tarkov_api.Database.EntityConfig;
+namespace Tarkov.API.Database.EntityConfig;
 
 public class AchievementEntityConfig : IEntityTypeConfiguration<AchievementEntity>
 {

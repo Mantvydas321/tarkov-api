@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using tarkov_api.Services;
+using Tarkov.API.Clients;
+using Tarkov.API.Services;
 
-namespace tarkov_api.Controllers;
+namespace Tarkov.API.Controllers;
 
 [ApiController]
 [Route("[controller]")]

@@ -1,4 +1,4 @@
-namespace tarkov_api.Data;
+namespace Tarkov.API.Data;
 
 public class AchievementDto
 {

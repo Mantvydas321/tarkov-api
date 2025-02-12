@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using tarkov_api.Database.Entities;
-using tarkov_api.Database.EntityConfig;
+using Tarkov.API.Database.Entities;
+using Tarkov.API.Database.EntityConfig;
 
-namespace tarkov_api.Database;
+namespace Tarkov.API.Database;
 
 public class DatabaseContext : DbContext
 {

@@ -1,6 +1,6 @@
-using tarkov_api.Data;
+using Tarkov.API.Data;
 
-namespace tarkov_api.Services;
+namespace Tarkov.API.Clients;
 
 public interface ITarkovClient
 {

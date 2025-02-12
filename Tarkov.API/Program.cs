@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using tarkov_api.Database;
-using tarkov_api.Services;
+using Tarkov.API.Clients;
+using Tarkov.API.Database;
+using Tarkov.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,14 +11,12 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
 
 builder.Services.AddControllers();
 
-builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Add services
 builder.Services.AddTransient<IAchievementsService, AchievementsService>();
 builder.Services.AddTransient<ITarkovClient, TarkovClient>();
-
 
 var app = builder.Build();
 
@@ -32,8 +31,6 @@ using (var serviceScope = app.Services.CreateScope())
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-
     // Serve the Swagger JSON at /swagger/v1/swagger.json
     app.UseSwagger();
 
@@ -41,7 +38,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-        options.RoutePrefix = string.Empty;  // Makes Swagger UI available at the root
+        options.RoutePrefix = string.Empty; // Makes Swagger UI available at the root
     });
 }
 

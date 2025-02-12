@@ -1,12 +1,9 @@
-using GraphQL;
-using GraphQL.Client.Http;
-using GraphQL.Client.Serializer.Newtonsoft;
 using Microsoft.EntityFrameworkCore;
-using tarkov_api.Data;
-using tarkov_api.Database;
-using tarkov_api.Database.Entities;
+using Tarkov.API.Data;
+using Tarkov.API.Database;
+using Tarkov.API.Database.Entities;
 
-namespace tarkov_api.Services;
+namespace Tarkov.API.Services;
 
 public class AchievementsService : IAchievementsService
 {
@@ -40,6 +37,7 @@ public class AchievementsService : IAchievementsService
 
             _context.Achievements.Add(entity);
         }
+
         await _context.SaveChangesAsync();
     }
 }

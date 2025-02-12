@@ -1,4 +1,4 @@
-namespace tarkov_api.Database.Entities;
+namespace Tarkov.API.Database.Entities;
 
 public class AchievementEntity
 {

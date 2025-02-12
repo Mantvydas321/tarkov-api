@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace tarkov_api.Migrations
+namespace Tarkov.API.Migrations
 {
     /// <inheritdoc />
     public partial class Init : Migration

@@ -1,9 +1,9 @@
 using GraphQL;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.Newtonsoft;
-using tarkov_api.Data;
+using Tarkov.API.Data;
 
-namespace tarkov_api.Services;
+namespace Tarkov.API.Clients;
 
 public class TarkovClient : ITarkovClient
 {
