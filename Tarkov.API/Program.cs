@@ -1,7 +1,9 @@
+using GraphQL.Client.Http;
+using GraphQL.Client.Serializer.SystemTextJson;
 using Microsoft.EntityFrameworkCore;
-using Tarkov.API.Clients;
 using Tarkov.API.Database;
-using Tarkov.API.Services;
+using Tarkov.API.Infrastructure.Clients;
+using Tarkov.API.Infrastructure.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,8 +17,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Add services
-builder.Services.AddTransient<IAchievementsService, AchievementsService>();
-builder.Services.AddTransient<ITarkovClient, TarkovClient>();
+builder.Services.AddTransient<TarkovClient>();
+builder.Services.AddTransient<AchievementsSyncTask>();
+builder.Services.AddTransient<AchievementTranslationsSyncTask>();
+
+// Add GraphQL client
+builder.Services.AddSingleton<GraphQLHttpClient>(
+    _ => new GraphQLHttpClient("https://api.tarkov.dev/graphql", new SystemTextJsonSerializer())
+);
 
 var app = builder.Build();
 
