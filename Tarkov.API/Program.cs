@@ -1,39 +1,55 @@
+using System.Text.Json.Serialization;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
 using Microsoft.EntityFrameworkCore;
+using Tarkov.API.Application.Tasks;
 using Tarkov.API.Database;
+using Tarkov.API.Infrastructure;
 using Tarkov.API.Infrastructure.Clients;
-using Tarkov.API.Infrastructure.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add database context
-builder.Services.AddDbContext<DatabaseContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<DatabaseContext>(options => { options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")); });
+builder.Services.AddTransient<DatabaseContextSeed>();
 
-builder.Services.AddControllers();
+// Add Controllers
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add(typeof(HttpGlobalExceptionFilter));
+    options.EnableEndpointRouting = true;
+});
+builder.Services.ConfigureHttpJsonOptions(options => { options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()); });
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options => { options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()); });
 
+
+// Add MediatR
+builder.Services.AddMediatR(cfg => { cfg.RegisterServicesFromAssemblyContaining<Program>(); });
+
+// Add Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Add services
-builder.Services.AddTransient<TarkovClient>();
-builder.Services.AddTransient<AchievementsSyncTask>();
-builder.Services.AddTransient<AchievementTranslationsSyncTask>();
+builder.Services.AddKeyedTransient<ISyncTask, AchievementsSyncTask>(nameof(AchievementsSyncTask));
+builder.Services.AddKeyedTransient<ISyncTask, AchievementTranslationsSyncTask>(nameof(AchievementTranslationsSyncTask));
 
 // Add GraphQL client
+builder.Services.AddTransient<TarkovClient>();
 builder.Services.AddSingleton<GraphQLHttpClient>(
     _ => new GraphQLHttpClient("https://api.tarkov.dev/graphql", new SystemTextJsonSerializer())
 );
 
+// Add background service
+builder.Services.AddHostedService<TaskExecutorBackgroundService>();
+
 var app = builder.Build();
 
-// Create and migrate database
-using (var serviceScope = app.Services.CreateScope())
+// Create, migrate adn seed database
+await using (var serviceScope = app.Services.CreateAsyncScope())
 {
-    var context = serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
-    context.Database.Migrate();
-    context.SaveChanges();
+    var seed = serviceScope.ServiceProvider.GetRequiredService<DatabaseContextSeed>();
+    await seed.SeedAsync();
 }
 
 // Configure the HTTP request pipeline.

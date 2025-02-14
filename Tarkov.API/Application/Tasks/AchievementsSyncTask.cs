@@ -2,9 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Tarkov.API.Database;
 using Tarkov.API.Database.Entities;
 using Tarkov.API.Infrastructure.Clients;
-using Tarkov.API.Infrastructure.Clients.Queries;
 
-namespace Tarkov.API.Infrastructure.Tasks;
+namespace Tarkov.API.Application.Tasks;
 
 public class AchievementsSyncTask : AbstractSyncTask
 {
@@ -21,12 +20,17 @@ public class AchievementsSyncTask : AbstractSyncTask
         _logger = logger;
     }
 
-    public async Task Run()
+    public override async Task Run(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Synchronizing achievements");
 
         for (int offset = 0;; offset += BatchSize)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
             _logger.LogInformation("Fetching achievements {Start} to {End}", offset, offset + BatchSize);
             var achievements = await _client.Achievements(offset, BatchSize);
 
@@ -44,6 +48,8 @@ public class AchievementsSyncTask : AbstractSyncTask
                 .Select(e => TranslationKey.Achievement.Description(e.Id))
                 .ToHashSet()
             );
+            
+            await _context.SaveChangesAsync();
 
             var ids = achievements.Select(e => e.Id).ToHashSet();
             var existingAchievements = await _context.Achievements
@@ -54,27 +60,24 @@ public class AchievementsSyncTask : AbstractSyncTask
             {
                 if (existingAchievements.TryGetValue(achievement.Id, out var existing))
                 {
-                    existing.Hidden = achievement.Hidden;
-                    existing.Side = achievement.NormalizedSide;
-                    existing.Rarity = achievement.NormalizedRarity;
-                    existing.PlayersCompletedPercentage = achievement.PlayersCompletedPercent;
-                    existing.AdjustedPlayersCompletedPercentage = achievement.AdjustedPlayersCompletedPercent;
+                    existing.UpdateHidden(achievement.Hidden);
+                    existing.UpdateSide(achievement.NormalizedSide);
+                    existing.UpdateRarity(achievement.NormalizedRarity);
+                    existing.UpdatePlayersCompletedPercentage(achievement.PlayersCompletedPercent);
+                    existing.UpdateAdjustedPlayersCompletedPercentage(achievement.AdjustedPlayersCompletedPercent);
                     continue;
                 }
 
                 _logger.LogInformation("Inserting new achievement {Id}", achievement.Id);
 
-                _context.Achievements.Add(new AchievementEntity
-                {
-                    Id = achievement.Id,
-                    NameTranslationKey = TranslationKey.Achievement.Name(achievement.Id),
-                    DescriptionTranslationKey = TranslationKey.Achievement.Description(achievement.Id),
-                    Hidden = achievement.Hidden,
-                    Side = achievement.NormalizedSide,
-                    Rarity = achievement.NormalizedRarity,
-                    PlayersCompletedPercentage = achievement.PlayersCompletedPercent,
-                    AdjustedPlayersCompletedPercentage = achievement.AdjustedPlayersCompletedPercent,
-                });
+                _context.Achievements.Add(new AchievementEntity(
+                    achievement.Id,
+                    achievement.Hidden,
+                    achievement.NormalizedSide,
+                    achievement.NormalizedRarity,
+                    achievement.PlayersCompletedPercent,
+                    achievement.AdjustedPlayersCompletedPercent
+                ));
             }
 
             await _context.SaveChangesAsync();

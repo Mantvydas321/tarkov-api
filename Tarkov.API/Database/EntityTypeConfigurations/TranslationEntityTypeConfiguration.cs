@@ -23,6 +23,12 @@ public class TranslationEntityTypeConfiguration : IEntityTypeConfiguration<Trans
             .HasMaxLength(500)
             .IsRequired();
 
+        builder.Property(x => x.CreatedDate)
+            .IsRequired();
+        
+        builder.Property(x => x.ModifiedDate)
+            .IsRequired();
+        
         builder.HasOne(x => x.KeyEntity)
             .WithMany(x => x.Translations)
             .HasForeignKey(x => x.Key);

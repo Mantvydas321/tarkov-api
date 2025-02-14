@@ -38,6 +38,12 @@ public class AchievementEntityTypeConfiguration : IEntityTypeConfiguration<Achie
 
         builder.Property(x => x.AdjustedPlayersCompletedPercentage)
             .IsRequired();
+        
+        builder.Property(x => x.CreatedDate)
+            .IsRequired();
+        
+        builder.Property(x => x.ModifiedDate)
+            .IsRequired();
 
         builder
             .HasOne(x => x.NameTranslationKeyEntity)

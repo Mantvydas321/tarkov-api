@@ -14,11 +14,14 @@ public class TranslationKeyEntityTypeConfiguration : IEntityTypeConfiguration<Tr
             .HasMaxLength(TranslationKeyEntity.MaxKeyLength)
             .ValueGeneratedNever();
 
+        builder.Property(x => x.CreatedDate)
+            .IsRequired();
+
         builder.HasMany(x => x.Translations)
             .WithOne(x => x.KeyEntity)
             .HasForeignKey(x => x.Key)
             .OnDelete(DeleteBehavior.Restrict);
-        
+
         builder.HasOne(x => x.AchievementName)
             .WithOne(x => x.NameTranslationKeyEntity)
             .HasForeignKey<AchievementEntity>(x => x.NameTranslationKey)
