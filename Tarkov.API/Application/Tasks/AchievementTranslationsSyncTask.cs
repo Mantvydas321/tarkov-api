@@ -7,7 +7,7 @@ using Tarkov.API.Infrastructure.Clients.Queries;
 
 namespace Tarkov.API.Application.Tasks;
 
-public class AchievementTranslationsSyncTask : AbstractSyncTask
+public class AchievementTranslationsSyncTask : ISyncTask
 {
     private const int BatchSize = 100;
 
@@ -15,15 +15,14 @@ public class AchievementTranslationsSyncTask : AbstractSyncTask
     private readonly TarkovClient _client;
     private readonly ILogger<AchievementTranslationsSyncTask> _logger;
 
-    public AchievementTranslationsSyncTask(DatabaseContext context, TarkovClient client, ILogger<AchievementTranslationsSyncTask> logger) : base(context,
-        logger)
+    public AchievementTranslationsSyncTask(DatabaseContext context, TarkovClient client, ILogger<AchievementTranslationsSyncTask> logger)
     {
         _context = context;
         _client = client;
         _logger = logger;
     }
 
-    public override async Task Run(CancellationToken cancellationToken = default)
+    public async Task Run(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Synchronizing achievement translations");
 
@@ -44,31 +43,60 @@ public class AchievementTranslationsSyncTask : AbstractSyncTask
                     break;
                 }
 
-                await InsertMissingTranslationKeys(achievements
-                    .Select(e => TranslationKey.Achievement.Name(e.Id))
-                    .ToHashSet()
-                );
+                var achievementIds = achievements
+                    .Select(e => e.Id)
+                    .ToHashSet();
 
-                await InsertMissingTranslationKeys(achievements
-                    .Select(e => TranslationKey.Achievement.Description(e.Id))
-                    .ToHashSet()
-                );
-                
-                await _context.SaveChangesAsync();
+                var achievementEntities = await _context
+                    .Achievements
+                    .Include(e => e.Translations.Where(t => t.Language == lang))
+                    .Where(e => achievementIds.Contains(e.Id))
+                    .ToDictionaryAsync(e => e.Id);
 
-                await UpdateTranslations(
-                    lang,
-                    achievements,
-                    e => TranslationKey.Achievement.Name(e.Id),
-                    e => e.Name
-                );
+                foreach (var achievement in achievements)
+                {
+                    if (!achievementEntities.TryGetValue(achievement.Id, out var achievementEntity))
+                    {
+                        _logger.LogWarning("Achievement {Key} not found in database, skipping translation", achievement.Id);
+                        continue;
+                    }
 
-                await UpdateTranslations(
-                    lang,
-                    achievements,
-                    e => TranslationKey.Achievement.Description(e.Id),
-                    e => e.Description
-                );
+                    var nameTranslation = achievementEntity.Translations.FirstOrDefault(
+                        e => e.Language == lang && e.Field == AchievementTranslationField.Name
+                    );
+                    if (nameTranslation != null)
+                    {
+                        nameTranslation.UpdateValue(achievement.Name);
+                    }
+                    else
+                    {
+                        nameTranslation = new AchievementTranslationEntity(
+                            achievement.Id,
+                            lang,
+                            AchievementTranslationField.Name,
+                            achievement.Name
+                        );
+                        achievementEntity.Translations.Add(nameTranslation);
+                    }
+
+                    var descriptionTranslation = achievementEntity.Translations.FirstOrDefault(
+                        e => e.Language == lang && e.Field == AchievementTranslationField.Description
+                    );
+                    if (descriptionTranslation != null)
+                    {
+                        descriptionTranslation.UpdateValue(achievement.Description);
+                    }
+                    else
+                    {
+                        descriptionTranslation = new AchievementTranslationEntity(
+                            achievement.Id,
+                            lang,
+                            AchievementTranslationField.Description,
+                            achievement.Description
+                        );
+                        achievementEntity.Translations.Add(descriptionTranslation);
+                    }
+                }
 
                 await _context.SaveChangesAsync();
 

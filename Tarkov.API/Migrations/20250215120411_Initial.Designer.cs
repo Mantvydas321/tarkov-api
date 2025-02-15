@@ -12,7 +12,7 @@ using Tarkov.API.Database;
 namespace Tarkov.API.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250214222152_Initial")]
+    [Migration("20250215120411_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -37,21 +37,11 @@ namespace Tarkov.API.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DescriptionTranslationKey")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<bool>("Hidden")
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("ModifiedDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("NameTranslationKey")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<float>("PlayersCompletedPercentage")
                         .HasColumnType("real");
@@ -68,13 +58,36 @@ namespace Tarkov.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DescriptionTranslationKey")
-                        .IsUnique();
-
-                    b.HasIndex("NameTranslationKey")
-                        .IsUnique();
-
                     b.ToTable("Achievements");
+                });
+
+            modelBuilder.Entity("Tarkov.API.Database.Entities.AchievementTranslationEntity", b =>
+                {
+                    b.Property<string>("AchievementId")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<int>("Field")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("AchievementId", "Language", "Field");
+
+                    b.ToTable("AchievementTranslations");
                 });
 
             modelBuilder.Entity("Tarkov.API.Database.Entities.TaskEntity", b =>
@@ -161,63 +174,15 @@ namespace Tarkov.API.Migrations
                     b.ToTable("TaskExecutions");
                 });
 
-            modelBuilder.Entity("Tarkov.API.Database.Entities.TranslationEntity", b =>
+            modelBuilder.Entity("Tarkov.API.Database.Entities.AchievementTranslationEntity", b =>
                 {
-                    b.Property<string>("Key")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Language")
-                        .HasMaxLength(2)
-                        .HasColumnType("nvarchar(2)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("ModifiedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.HasKey("Key", "Language");
-
-                    b.ToTable("Translations");
-                });
-
-            modelBuilder.Entity("Tarkov.API.Database.Entities.TranslationKeyEntity", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Key");
-
-                    b.ToTable("TranslationKeys");
-                });
-
-            modelBuilder.Entity("Tarkov.API.Database.Entities.AchievementEntity", b =>
-                {
-                    b.HasOne("Tarkov.API.Database.Entities.TranslationKeyEntity", "DescriptionTranslationKeyEntity")
-                        .WithOne("AchievementDescription")
-                        .HasForeignKey("Tarkov.API.Database.Entities.AchievementEntity", "DescriptionTranslationKey")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("Tarkov.API.Database.Entities.AchievementEntity", "Achievement")
+                        .WithMany("Translations")
+                        .HasForeignKey("AchievementId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Tarkov.API.Database.Entities.TranslationKeyEntity", "NameTranslationKeyEntity")
-                        .WithOne("AchievementName")
-                        .HasForeignKey("Tarkov.API.Database.Entities.AchievementEntity", "NameTranslationKey")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("DescriptionTranslationKeyEntity");
-
-                    b.Navigation("NameTranslationKeyEntity");
+                    b.Navigation("Achievement");
                 });
 
             modelBuilder.Entity("Tarkov.API.Database.Entities.TaskExecutionEntity", b =>
@@ -231,29 +196,14 @@ namespace Tarkov.API.Migrations
                     b.Navigation("Task");
                 });
 
-            modelBuilder.Entity("Tarkov.API.Database.Entities.TranslationEntity", b =>
+            modelBuilder.Entity("Tarkov.API.Database.Entities.AchievementEntity", b =>
                 {
-                    b.HasOne("Tarkov.API.Database.Entities.TranslationKeyEntity", "KeyEntity")
-                        .WithMany("Translations")
-                        .HasForeignKey("Key")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("KeyEntity");
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("Tarkov.API.Database.Entities.TaskEntity", b =>
                 {
                     b.Navigation("Executions");
-                });
-
-            modelBuilder.Entity("Tarkov.API.Database.Entities.TranslationKeyEntity", b =>
-                {
-                    b.Navigation("AchievementDescription");
-
-                    b.Navigation("AchievementName");
-
-                    b.Navigation("Translations");
                 });
 #pragma warning restore 612, 618
         }

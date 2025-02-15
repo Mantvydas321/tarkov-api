@@ -10,49 +10,44 @@ public class AchievementEntityTypeConfiguration : IEntityTypeConfiguration<Achie
     {
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Id)
-            .HasMaxLength(30)
+        builder
+            .Property(x => x.Id)
+            .HasMaxLength(AchievementEntity.MaxIdLength)
             .ValueGeneratedNever();
 
-        builder.Property(x => x.NameTranslationKey)
-            .HasMaxLength(TranslationKeyEntity.MaxKeyLength)
-            .IsRequired();
-
-        builder.Property(x => x.DescriptionTranslationKey)
-            .HasMaxLength(TranslationKeyEntity.MaxKeyLength)
-            .IsRequired();
-
-        builder.Property(x => x.Hidden)
-            .IsRequired();
-
-        builder.Property(x => x.Side)
-            .HasMaxLength(10)
-            .IsRequired();
-
-        builder.Property(x => x.Rarity)
-            .HasMaxLength(10)
-            .IsRequired();
-
-        builder.Property(x => x.PlayersCompletedPercentage)
-            .IsRequired();
-
-        builder.Property(x => x.AdjustedPlayersCompletedPercentage)
-            .IsRequired();
-        
-        builder.Property(x => x.CreatedDate)
-            .IsRequired();
-        
-        builder.Property(x => x.ModifiedDate)
+        builder
+            .Property(x => x.Hidden)
             .IsRequired();
 
         builder
-            .HasOne(x => x.NameTranslationKeyEntity)
-            .WithOne(x => x.AchievementName)
-            .HasForeignKey<AchievementEntity>(x => x.NameTranslationKey);
+            .Property(x => x.Side)
+            .HasMaxLength(10)
+            .IsRequired();
 
         builder
-            .HasOne(x => x.DescriptionTranslationKeyEntity)
-            .WithOne(x => x.AchievementDescription)
-            .HasForeignKey<AchievementEntity>(x => x.DescriptionTranslationKey);
+            .Property(x => x.Rarity)
+            .HasMaxLength(10)
+            .IsRequired();
+
+        builder
+            .Property(x => x.PlayersCompletedPercentage)
+            .IsRequired();
+
+        builder
+            .Property(x => x.AdjustedPlayersCompletedPercentage)
+            .IsRequired();
+
+        builder
+            .Property(x => x.CreatedDate)
+            .IsRequired();
+
+        builder
+            .Property(x => x.ModifiedDate)
+            .IsRequired();
+
+        builder
+            .HasMany(x => x.Translations)
+            .WithOne(x => x.Achievement)
+            .HasForeignKey(x => x.AchievementId);
     }
 }

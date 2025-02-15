@@ -5,7 +5,7 @@ using Tarkov.API.Infrastructure.Clients;
 
 namespace Tarkov.API.Application.Tasks;
 
-public class AchievementsSyncTask : AbstractSyncTask
+public class AchievementsSyncTask : ISyncTask
 {
     private const int BatchSize = 100;
 
@@ -13,14 +13,14 @@ public class AchievementsSyncTask : AbstractSyncTask
     private readonly TarkovClient _client;
     private readonly ILogger<AchievementsSyncTask> _logger;
 
-    public AchievementsSyncTask(DatabaseContext context, TarkovClient client, ILogger<AchievementsSyncTask> logger) : base(context, logger)
+    public AchievementsSyncTask(DatabaseContext context, TarkovClient client, ILogger<AchievementsSyncTask> logger)
     {
         _context = context;
         _client = client;
         _logger = logger;
     }
 
-    public override async Task Run(CancellationToken cancellationToken = default)
+    public async Task Run(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Synchronizing achievements");
 
@@ -38,18 +38,6 @@ public class AchievementsSyncTask : AbstractSyncTask
             {
                 break;
             }
-
-            await InsertMissingTranslationKeys(achievements
-                .Select(e => TranslationKey.Achievement.Name(e.Id))
-                .ToHashSet()
-            );
-
-            await InsertMissingTranslationKeys(achievements
-                .Select(e => TranslationKey.Achievement.Description(e.Id))
-                .ToHashSet()
-            );
-            
-            await _context.SaveChangesAsync();
 
             var ids = achievements.Select(e => e.Id).ToHashSet();
             var existingAchievements = await _context.Achievements

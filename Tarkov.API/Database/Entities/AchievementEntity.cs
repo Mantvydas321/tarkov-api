@@ -5,19 +5,17 @@ namespace Tarkov.API.Database.Entities;
 
 public class AchievementEntity : IMutableEntity
 {
+    public const int MaxIdLength = 30;
+
     public string Id { get; protected set; }
-
-    public string NameTranslationKey { get; protected set; }
-    public TranslationKeyEntity? NameTranslationKeyEntity { get; protected set; }
-
-    public string DescriptionTranslationKey { get; protected set; }
-    public TranslationKeyEntity? DescriptionTranslationKeyEntity { get; protected set; }
 
     public bool Hidden { get; protected set; }
     public string Side { get; protected set; }
     public string Rarity { get; protected set; }
     public float PlayersCompletedPercentage { get; protected set; }
     public float AdjustedPlayersCompletedPercentage { get; protected set; }
+
+    public List<AchievementTranslationEntity> Translations { get; set; } = new();
 
     public DateTime? CreatedDate { get; set; }
     public DateTime? ModifiedDate { get; set; }
@@ -32,8 +30,6 @@ public class AchievementEntity : IMutableEntity
     public AchievementEntity(string id, bool hidden, string side, string rarity, float playersCompletedPercentage, float adjustedPlayersCompletedPercentage)
     {
         Id = id;
-        NameTranslationKey = TranslationKey.Achievement.Name(id);
-        DescriptionTranslationKey = TranslationKey.Achievement.Description(id);
         Hidden = hidden;
         Side = side;
         Rarity = rarity;
@@ -83,8 +79,8 @@ public class AchievementEntity : IMutableEntity
 
     public AchievementData AsData(LanguageCode lang)
     {
-        var nameTranslation = NameTranslationKeyEntity?.Translations.FirstOrDefault(t => t.Language == lang);
-        var descriptionTranslation = DescriptionTranslationKeyEntity?.Translations.FirstOrDefault(t => t.Language == lang);
+        var nameTranslation = Translations.FirstOrDefault(t => t.Language == lang && t.Field == AchievementTranslationField.Name);
+        var descriptionTranslation = Translations.FirstOrDefault(t => t.Language == lang && t.Field == AchievementTranslationField.Description);
 
         return new AchievementData
         {

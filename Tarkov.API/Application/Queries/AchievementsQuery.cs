@@ -35,10 +35,7 @@ public class AchievementsQueryHandler : IRequestHandler<AchievementsQueryRequest
     public async Task<Page<AchievementData>> Handle(AchievementsQueryRequest request, CancellationToken cancellationToken)
     {
         var query = _context.Achievements
-            .Include(e => e.NameTranslationKeyEntity)
-            .ThenInclude(e => e!.Translations.Where(t => t.Language == request.Language))
-            .Include(e => e.DescriptionTranslationKeyEntity)
-            .ThenInclude(e => e!.Translations.Where(t => t.Language == request.Language))
+            .Include(e => e.Translations)
             .AsQueryable();
 
         var tasks = await query

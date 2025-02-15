@@ -46,7 +46,7 @@ public class DatabaseContextSeed
             ),
             TaskEntity.Create<AchievementTranslationsSyncTask>(
                 Guid.Parse("1d50d99a-2814-4863-aba9-64a7d0fb87b5"),
-                "0 0 * * 0" // At 00:00 on Sunday
+                "0 5 * * 0" // At 00:05 on Sunday
             ),
         ];
     }

@@ -7,8 +7,7 @@ namespace Tarkov.API.Database;
 public class DatabaseContext : DbContext
 {
     public DbSet<AchievementEntity> Achievements { get; set; }
-    public DbSet<TranslationKeyEntity> TranslationKeys { get; set; }
-    public DbSet<TranslationEntity> Translations { get; set; }
+    public DbSet<AchievementTranslationEntity> AchievementTranslations { get; set; }
     public DbSet<TaskEntity> Tasks { get; set; }
     public DbSet<TaskExecutionEntity> TaskExecutions { get; set; }
 
