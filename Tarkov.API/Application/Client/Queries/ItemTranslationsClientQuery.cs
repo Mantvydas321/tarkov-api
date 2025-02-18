@@ -5,30 +5,30 @@ using Tarkov.API.Database.Enumeration;
 
 namespace Tarkov.API.Application.Client.Queries;
 
-public class AchievementTranslationsClientRequest : IRequest<AchievementTranslationsClientResponse>
+public class ItemTranslationsClientRequest : IRequest<ItemTranslationsClientResponse>
 {
     public required LanguageCode Lang { get; set; }
     public required int Limit { get; set; }
     public required int Offset { get; set; }
 }
 
-public class AchievementTranslationsClientData
+public class ItemTranslationClientData
 {
     public required string Id { get; set; }
     public required string? Name { get; set; }
     public required string? Description { get; set; }
 }
 
-public class AchievementTranslationsClientResponse
+public class ItemTranslationsClientResponse
 {
-    public required List<AchievementTranslationsClientData> Achievements { get; set; }
+    public required List<ItemTranslationClientData> Items { get; set; }
 }
 
-public class AchievementTranslationsClientQuery : IRequestHandler<AchievementTranslationsClientRequest, AchievementTranslationsClientResponse>
+public class ItemTranslationsClientQuery : IRequestHandler<ItemTranslationsClientRequest, ItemTranslationsClientResponse>
 {
     private static readonly string QueryString = @"
-        query Achievements($lang: LanguageCode, $limit: Int, $offset: Int) {
-            achievements(lang: $lang, limit: $limit, offset: $offset) {
+        query Items($lang: LanguageCode, $limit: Int, $offset: Int) {
+            items(lang: $lang, limit: $limit, offset: $offset) {
                 id
                 name
                 description
@@ -38,17 +38,17 @@ public class AchievementTranslationsClientQuery : IRequestHandler<AchievementTra
 
     private readonly GraphQLHttpClient _client;
 
-    public AchievementTranslationsClientQuery(GraphQLHttpClient client)
+    public ItemTranslationsClientQuery(GraphQLHttpClient client)
     {
         _client = client;
     }
 
-    public async Task<AchievementTranslationsClientResponse> Handle(AchievementTranslationsClientRequest clientRequest, CancellationToken cancellationToken)
+    public async Task<ItemTranslationsClientResponse> Handle(ItemTranslationsClientRequest clientRequest, CancellationToken cancellationToken)
     {
         var query = new GraphQLRequest
         {
             Query = QueryString,
-            OperationName = "Achievements",
+            OperationName = "Items",
             Variables = new
             {
                 limit = clientRequest.Limit,
@@ -57,7 +57,7 @@ public class AchievementTranslationsClientQuery : IRequestHandler<AchievementTra
             }
         };
 
-        var response = await _client.SendQueryAsync<AchievementTranslationsClientResponse>(query, cancellationToken);
+        var response = await _client.SendQueryAsync<ItemTranslationsClientResponse>(query, cancellationToken);
         if (response.Errors != null)
         {
             throw new Exception(string.Join(", ", response.Errors.Select(e => e.Message)));

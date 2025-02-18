@@ -7,7 +7,7 @@ using Tarkov.API.Database.Enumeration;
 
 namespace Tarkov.API.Application.Tasks;
 
-public class AchievementTranslationsSyncTask : ISyncTask
+public class ItemTranslationsSyncTask : ISyncTask
 {
     private const int BatchSize = 100;
 
@@ -15,7 +15,7 @@ public class AchievementTranslationsSyncTask : ISyncTask
     private readonly IMediator _mediator;
     private readonly ILogger<AchievementTranslationsSyncTask> _logger;
 
-    public AchievementTranslationsSyncTask(IServiceProvider serviceProvider, IMediator mediator, ILogger<AchievementTranslationsSyncTask> logger)
+    public ItemTranslationsSyncTask(IServiceProvider serviceProvider, IMediator mediator, ILogger<AchievementTranslationsSyncTask> logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -26,14 +26,14 @@ public class AchievementTranslationsSyncTask : ISyncTask
 
     public async Task Run(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Synchronizing achievement translations");
+        _logger.LogInformation("Synchronizing item translations");
 
         foreach (var lang in Enum.GetValues<LanguageCode>())
         {
             for (int offset = 0; await FetchBatch(lang, offset, cancellationToken) && !cancellationToken.IsCancellationRequested; offset += BatchSize) ;
         }
 
-        _logger.LogInformation("Achievement translations synchronized");
+        _logger.LogInformation("Item translations synchronized");
     }
 
     private async Task<bool> FetchBatch(LanguageCode lang, int offset, CancellationToken cancellationToken = default)
@@ -42,51 +42,51 @@ public class AchievementTranslationsSyncTask : ISyncTask
         await using var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
         context.Counter = EntitiesCounter;
 
-        _logger.LogInformation("Fetching achievements translations for {Language} {Start} to {End}", lang, offset, offset + BatchSize);
-        var achievements = (
-            await _mediator.Send(new AchievementTranslationsClientRequest() { Lang = lang, Limit = BatchSize, Offset = offset }, cancellationToken)
-        ).Achievements;
+        _logger.LogInformation("Fetching item translations for {Language} {Start} to {End}", lang, offset, offset + BatchSize);
+        var items = (
+            await _mediator.Send(new ItemTranslationsClientRequest() { Lang = lang, Limit = BatchSize, Offset = offset }, cancellationToken)
+        ).Items;
 
-        if (achievements.Count == 0)
+        if (items.Count == 0)
         {
             return false;
         }
 
-        var achievementIds = achievements
+        var itemIds = items
             .Select(e => e.Id)
             .ToHashSet();
 
-        var achievementEntities = await context
-            .Achievements
+        var itemEntities = await context
+            .Items
             .AsSplitQuery()
             .Include(e => e.Translations.Where(t => t.Language == lang))
-            .Where(e => achievementIds.Contains(e.Id))
+            .Where(e => itemIds.Contains(e.Id))
             .ToDictionaryAsync(e => e.Id, cancellationToken: cancellationToken);
 
-        foreach (var achievement in achievements)
+        foreach (var item in items)
         {
-            if (!achievementEntities.TryGetValue(achievement.Id, out var achievementEntity))
+            if (!itemEntities.TryGetValue(item.Id, out var itemEntity))
             {
-                _logger.LogWarning("Achievement {Key} not found in database, skipping translation", achievement.Id);
+                _logger.LogWarning("Item {Key} not found in database, skipping translation", item.Id);
                 continue;
             }
 
-            if (achievement.Name != null)
+            if (item.Name != null)
             {
-                UpdateTranslation(achievementEntity, achievement.Name, lang, AchievementTranslationField.Name);
+                UpdateTranslation(itemEntity, item.Name, lang, ItemTranslationEntityField.Name);
             }
 
-            if (achievement.Description != null)
+            if (item.Description != null)
             {
-                UpdateTranslation(achievementEntity, achievement.Description, lang, AchievementTranslationField.Description);
+                UpdateTranslation(itemEntity, item.Description, lang, ItemTranslationEntityField.Description);
             }
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return achievements.Count == BatchSize;
+        return items.Count == BatchSize;
     }
 
-    private void UpdateTranslation(AchievementEntity entity, string value, LanguageCode lang, AchievementTranslationField field)
+    private void UpdateTranslation(ItemEntity entity, string value, LanguageCode lang, ItemTranslationEntityField field)
     {
         var nameTranslation = entity.Translations.FirstOrDefault(
             e => e.Language == lang && e.Field == field
@@ -97,7 +97,7 @@ public class AchievementTranslationsSyncTask : ISyncTask
         }
         else
         {
-            nameTranslation = new AchievementTranslationEntity(
+            nameTranslation = new ItemTranslationEntity(
                 entity.Id,
                 lang,
                 field,

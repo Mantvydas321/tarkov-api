@@ -44,6 +44,8 @@ public class ItemEntity : IMutableEntity
 
     public List<ItemTypeEntity> Types { get; protected set; } = new();
 
+    public List<ItemTranslationEntity> Translations { get; set; } = new();
+
     // EF Core constructor
 #pragma warning disable CS8618, CS9264
     protected ItemEntity()

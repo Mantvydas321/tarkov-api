@@ -52,6 +52,10 @@ public class DatabaseContextSeed
                 Guid.Parse("6797d62e-a662-45e3-81d8-5a885d871b20"),
                 "0 15 * * 0" // At 00:15 on Sunday
             ),
+            TaskEntity.Create<ItemTranslationsSyncTask>(
+                Guid.Parse("353342a6-1d22-4821-b00d-8d5f6dd5f07e"),
+                "0 20 * * 0" // At 00:20 on Sunday
+            ),
         ];
     }
 }

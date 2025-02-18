@@ -33,6 +33,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddKeyedTransient<ISyncTask, AchievementsSyncTask>(nameof(AchievementsSyncTask));
 builder.Services.AddKeyedTransient<ISyncTask, AchievementTranslationsSyncTask>(nameof(AchievementTranslationsSyncTask));
 builder.Services.AddKeyedTransient<ISyncTask, ItemsSyncTask>(nameof(ItemsSyncTask));
+builder.Services.AddKeyedTransient<ISyncTask, ItemTranslationsSyncTask>(nameof(ItemTranslationsSyncTask));
 
 // Add GraphQL client
 builder.Services.AddSingleton<GraphQLHttpClient>(
