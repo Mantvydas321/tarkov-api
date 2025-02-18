@@ -36,9 +36,12 @@ public class AchievementsQueryHandler : IRequestHandler<AchievementsQueryRequest
     {
         var query = _context.Achievements
             .Include(e => e.Translations)
+            .AsSplitQuery()
+            .AsNoTracking()
             .AsQueryable();
 
         var tasks = await query
+            .OrderBy(e => e.Id)
             .Skip(request.Offset)
             .Take(request.Limit)
             .Select(t => t.AsData(request.Language))

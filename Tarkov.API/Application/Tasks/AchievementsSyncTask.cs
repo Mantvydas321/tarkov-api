@@ -1,7 +1,8 @@
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tarkov.API.Application.Client.Queries;
 using Tarkov.API.Database;
 using Tarkov.API.Database.Entities;
-using Tarkov.API.Infrastructure.Clients;
 
 namespace Tarkov.API.Application.Tasks;
 
@@ -10,13 +11,13 @@ public class AchievementsSyncTask : ISyncTask
     private const int BatchSize = 100;
 
     private readonly DatabaseContext _context;
-    private readonly TarkovClient _client;
+    private readonly IMediator _mediator;
     private readonly ILogger<AchievementsSyncTask> _logger;
 
-    public AchievementsSyncTask(DatabaseContext context, TarkovClient client, ILogger<AchievementsSyncTask> logger)
+    public AchievementsSyncTask(DatabaseContext context, IMediator mediator, ILogger<AchievementsSyncTask> logger)
     {
         _context = context;
-        _client = client;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -32,7 +33,10 @@ public class AchievementsSyncTask : ISyncTask
             }
 
             _logger.LogInformation("Fetching achievements {Start} to {End}", offset, offset + BatchSize);
-            var achievements = await _client.Achievements(offset, BatchSize);
+
+            var achievements = (
+                await _mediator.Send(new AchievementClientRequest() { Limit = BatchSize, Offset = offset }, cancellationToken)
+            ).Achievements;
 
             if (achievements.Count == 0)
             {
@@ -42,7 +46,7 @@ public class AchievementsSyncTask : ISyncTask
             var ids = achievements.Select(e => e.Id).ToHashSet();
             var existingAchievements = await _context.Achievements
                 .Where(e => ids.Contains(e.Id))
-                .ToDictionaryAsync(e => e.Id);
+                .ToDictionaryAsync(e => e.Id, cancellationToken: cancellationToken);
 
             foreach (var achievement in achievements)
             {

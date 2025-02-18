@@ -44,6 +44,7 @@ public class TasksQueryHandler : IRequestHandler<TasksQueryRequest, Page<TaskDat
         }
 
         var tasks = await query
+            .OrderBy(e => e.Id)
             .Skip(request.Offset)
             .Take(request.Limit)
             .Select(t => t.AsData())

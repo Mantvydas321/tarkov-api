@@ -8,6 +8,10 @@ public class DatabaseContext : DbContext
 {
     public DbSet<AchievementEntity> Achievements { get; set; }
     public DbSet<AchievementTranslationEntity> AchievementTranslations { get; set; }
+
+    public DbSet<ItemEntity> Items { get; set; }
+    public DbSet<ItemTypeEntity> ItemTypes { get; set; }
+
     public DbSet<TaskEntity> Tasks { get; set; }
     public DbSet<TaskExecutionEntity> TaskExecutions { get; set; }
 

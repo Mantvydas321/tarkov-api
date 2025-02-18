@@ -1,9 +1,9 @@
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tarkov.API.Application.Client.Queries;
 using Tarkov.API.Database;
 using Tarkov.API.Database.Entities;
 using Tarkov.API.Database.Enumeration;
-using Tarkov.API.Infrastructure.Clients;
-using Tarkov.API.Infrastructure.Clients.Queries;
 
 namespace Tarkov.API.Application.Tasks;
 
@@ -12,14 +12,14 @@ public class AchievementTranslationsSyncTask : ISyncTask
     private const int BatchSize = 100;
 
     private readonly DatabaseContext _context;
-    private readonly TarkovClient _client;
+    private readonly IMediator _mediator;
     private readonly ILogger<AchievementTranslationsSyncTask> _logger;
 
-    public AchievementTranslationsSyncTask(DatabaseContext context, TarkovClient client, ILogger<AchievementTranslationsSyncTask> logger)
+    public AchievementTranslationsSyncTask(DatabaseContext context, IMediator mediator, ILogger<AchievementTranslationsSyncTask> logger)
     {
         _context = context;
-        _client = client;
         _logger = logger;
+        _mediator = mediator;
     }
 
     public async Task Run(CancellationToken cancellationToken = default)
@@ -36,7 +36,9 @@ public class AchievementTranslationsSyncTask : ISyncTask
                 }
 
                 _logger.LogInformation("Fetching achievements translations for {Language} {Start} to {End}", lang, offset, offset + BatchSize);
-                var achievements = await _client.AchievementTranslations(lang, offset, BatchSize);
+                var achievements = (
+                    await _mediator.Send(new AchievementTranslationsClientRequest() { Lang = lang, Limit = BatchSize, Offset = offset }, cancellationToken)
+                ).Achievements;
 
                 if (achievements.Count == 0)
                 {
@@ -49,9 +51,10 @@ public class AchievementTranslationsSyncTask : ISyncTask
 
                 var achievementEntities = await _context
                     .Achievements
+                    .AsSplitQuery()
                     .Include(e => e.Translations.Where(t => t.Language == lang))
                     .Where(e => achievementIds.Contains(e.Id))
-                    .ToDictionaryAsync(e => e.Id);
+                    .ToDictionaryAsync(e => e.Id, cancellationToken: cancellationToken);
 
                 foreach (var achievement in achievements)
                 {

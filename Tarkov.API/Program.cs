@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Tarkov.API.Application.Tasks;
 using Tarkov.API.Database;
 using Tarkov.API.Infrastructure;
-using Tarkov.API.Infrastructure.Clients;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,9 +32,9 @@ builder.Services.AddSwaggerGen();
 // Add services
 builder.Services.AddKeyedTransient<ISyncTask, AchievementsSyncTask>(nameof(AchievementsSyncTask));
 builder.Services.AddKeyedTransient<ISyncTask, AchievementTranslationsSyncTask>(nameof(AchievementTranslationsSyncTask));
+builder.Services.AddKeyedTransient<ISyncTask, ItemsSyncTask>(nameof(ItemsSyncTask));
 
 // Add GraphQL client
-builder.Services.AddTransient<TarkovClient>();
 builder.Services.AddSingleton<GraphQLHttpClient>(
     _ => new GraphQLHttpClient("https://api.tarkov.dev/graphql", new SystemTextJsonSerializer())
 );

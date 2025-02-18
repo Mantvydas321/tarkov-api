@@ -1,8 +1,52 @@
+using Microsoft.EntityFrameworkCore;
 using Tarkov.API.Application.Tasks;
 using Tarkov.API.Database;
 using Tarkov.API.Database.Entities;
 
 namespace Tarkov.API.Infrastructure;
+
+public class ExecutionResult
+{
+    public Guid TaskId { get; private set; }
+    public bool Success { get; private set; } = true;
+    public string? ErrorMessage { get; private set; }
+    public int EntitiesUpdated { get; private set; }
+    public int EntitiesCreated { get; private set; }
+    public int EntitiesDeleted { get; private set; }
+
+    public DateTime StartTime { get; private set; }
+    public DateTime EndTime { get; private set; }
+    public TimeSpan Duration => StartTime - EndTime;
+
+    public ExecutionResult(Guid taskId)
+    {
+        TaskId = taskId;
+    }
+
+    public void SetError(string errorMessage)
+    {
+        var message = errorMessage.Substring(0, Math.Min(errorMessage.Length, TaskExecutionEntity.MaxErrorMessageLength));
+        Success = false;
+        ErrorMessage = message;
+    }
+
+    public void Start()
+    {
+        StartTime = DateTime.UtcNow;
+    }
+
+    public void End()
+    {
+        EndTime = DateTime.UtcNow;
+    }
+
+    public void AddEntitiesUpdated(DatabaseContext context)
+    {
+        EntitiesUpdated = context.EntitiesUpdated;
+        EntitiesCreated = context.EntitiesCreated;
+        EntitiesDeleted = context.EntitiesDeleted;
+    }
+}
 
 public class TaskExecutorBackgroundService : BackgroundService
 {
@@ -26,7 +70,7 @@ public class TaskExecutorBackgroundService : BackgroundService
         while (!cancellationToken.IsCancellationRequested)
         {
             var startTime = DateTime.UtcNow;
-            await TryExecuteNextTask(cancellationToken);
+            await TryExecuteTaskTask(cancellationToken);
             var endTime = DateTime.UtcNow;
 
             var timeToWait = CheckInterval - (endTime - startTime);
@@ -35,60 +79,96 @@ public class TaskExecutorBackgroundService : BackgroundService
                 await Task.Delay(timeToWait, cancellationToken);
             }
         }
-
-        throw new NotImplementedException();
     }
 
-    private async Task TryExecuteNextTask(CancellationToken cancellationToken = default)
+    private async Task TryExecuteTaskTask(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Checking for tasks to run");
-
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-
-        var taskEntity = context.Tasks
-            .OrderBy(t => t.NextScheduledRun)
-            .FirstOrDefault();
-        if (taskEntity == null || taskEntity.NextScheduledRun > DateTime.UtcNow)
+        var taskEntity = await GetNextTask(cancellationToken);
+        if (taskEntity == null)
         {
-            _logger.LogInformation($"Found no tasks to run");
+            _logger.LogInformation("No tasks to run");
             return;
         }
 
         _logger.LogInformation("Running task {TaskName}", taskEntity.Name);
 
-        var start = DateTime.UtcNow;
-        string? errorMessage = null;
-        try
+        var result = new ExecutionResult(taskEntity.Id);
         {
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var task = scope.ServiceProvider.GetRequiredKeyedService<ISyncTask>(taskEntity.Name);
-            await task.Run(cancellationToken);
-        }
-        catch (Exception e)
-        {
-            errorMessage = e.Message.Substring(0, Math.Min(e.Message.Length, TaskExecutionEntity.MaxErrorMessageLength));
-            _logger.LogError(e, "Task {TaskName} failed with error: {ErrorMessage}", taskEntity.Name, errorMessage);
+            result.Start();
+            try
+            {
+                await task.Run(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                result.SetError(e.Message);
+            }
+            finally
+            {
+                result.End();
+            }
+
+            if (!result.Success)
+            {
+                _logger.LogError("Task {TaskName} failed with error: {ErrorMessage}", taskEntity.Name, result.ErrorMessage);
+            }
+
+            result.AddEntitiesUpdated(context);
         }
 
-        var end = DateTime.UtcNow;
-        var duration = end - start;
+        await UpdateTask(result, cancellationToken);
+    }
+
+    private async Task UpdateTask(ExecutionResult result, CancellationToken cancellationToken = default)
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var taskEntity = await context.Tasks
+            .FirstOrDefaultAsync(t => t.Id == result.TaskId, cancellationToken: cancellationToken);
+
+        if (taskEntity == null)
+        {
+            throw new Exception("Task not found");
+        }
+
         taskEntity.Executions.Add(new TaskExecutionEntity(
             taskEntity.Id,
-            errorMessage == null,
-            context.EntitiesUpdated,
-            context.EntitiesCreated,
-            context.EntitiesDeleted,
-            start,
-            end,
-            duration,
-            errorMessage
+            result.Success,
+            result.EntitiesUpdated,
+            result.EntitiesCreated,
+            result.EntitiesDeleted,
+            result.StartTime,
+            result.EndTime,
+            result.Duration,
+            result.ErrorMessage
         ));
 
-        taskEntity.UpdateLastRun(end, errorMessage == null);
+        taskEntity.UpdateLastRun(result.EndTime, result.Success);
         taskEntity.ScheduleNextRun();
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
+    }
 
-        _logger.LogInformation("Task {TaskName} finished in {Duration}", taskEntity.Name, duration);
+    private async Task<TaskEntity?> GetNextTask(CancellationToken cancellationToken = default)
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var taskEntity = await context.Tasks
+            .AsNoTracking()
+            .OrderBy(t => t.NextScheduledRun)
+            .FirstOrDefaultAsync(cancellationToken: cancellationToken);
+
+        if (taskEntity == null || taskEntity.NextScheduledRun > DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        return taskEntity;
     }
 }
