@@ -39,7 +39,7 @@ public class ScheduledTaskCommandHandler : IRequestHandler<ScheduledTaskCommand,
     public async Task<Unit> Handle(ScheduledTaskCommand request, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
-        if (request.Body.ScheduledTime < now)
+        if (request.Body.ScheduledTime < now.AddMinutes(-1))
         {
             throw new BadRequestException("Scheduled time must be in the future");
         }

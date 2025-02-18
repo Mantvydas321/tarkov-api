@@ -15,9 +15,7 @@ public class DatabaseContext : DbContext
     public DbSet<TaskEntity> Tasks { get; set; }
     public DbSet<TaskExecutionEntity> TaskExecutions { get; set; }
 
-    public int EntitiesUpdated { get; private set; } = 0;
-    public int EntitiesCreated { get; private set; } = 0;
-    public int EntitiesDeleted { get; private set; } = 0;
+    public EntitiesCounter? Counter { get; set; }
 
     public DatabaseContext(DbContextOptions<DatabaseContext> options) : base(options)
     {
@@ -48,19 +46,22 @@ public class DatabaseContext : DbContext
             }
         }
 
-        foreach (var entry in ChangeTracker.Entries())
+        if (Counter != null)
         {
-            if (entry.State == EntityState.Modified)
+            foreach (var entry in ChangeTracker.Entries())
             {
-                EntitiesUpdated++;
-            }
-            else if (entry.State == EntityState.Added)
-            {
-                EntitiesCreated++;
-            }
-            else if (entry.State == EntityState.Deleted)
-            {
-                EntitiesDeleted++;
+                if (entry.State == EntityState.Modified)
+                {
+                    Counter.EntitiesUpdated++;
+                }
+                else if (entry.State == EntityState.Added)
+                {
+                    Counter.EntitiesCreated++;
+                }
+                else if (entry.State == EntityState.Deleted)
+                {
+                    Counter.EntitiesDeleted++;
+                }
             }
         }
 

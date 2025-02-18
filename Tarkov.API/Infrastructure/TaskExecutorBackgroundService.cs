@@ -5,23 +5,17 @@ using Tarkov.API.Database.Entities;
 
 namespace Tarkov.API.Infrastructure;
 
-public class ExecutionResult
+public class ExecutionResult(Guid taskId)
 {
-    public Guid TaskId { get; private set; }
+    public Guid TaskId { get; private set; } = taskId;
     public bool Success { get; private set; } = true;
     public string? ErrorMessage { get; private set; }
-    public int EntitiesUpdated { get; private set; }
-    public int EntitiesCreated { get; private set; }
-    public int EntitiesDeleted { get; private set; }
+
+    public EntitiesCounter Counter { get; private set; } = new();
 
     public DateTime StartTime { get; private set; }
     public DateTime EndTime { get; private set; }
     public TimeSpan Duration => StartTime - EndTime;
-
-    public ExecutionResult(Guid taskId)
-    {
-        TaskId = taskId;
-    }
 
     public void SetError(string errorMessage)
     {
@@ -38,13 +32,6 @@ public class ExecutionResult
     public void End()
     {
         EndTime = DateTime.UtcNow;
-    }
-
-    public void AddEntitiesUpdated(DatabaseContext context)
-    {
-        EntitiesUpdated = context.EntitiesUpdated;
-        EntitiesCreated = context.EntitiesCreated;
-        EntitiesDeleted = context.EntitiesDeleted;
     }
 }
 
@@ -96,7 +83,6 @@ public class TaskExecutorBackgroundService : BackgroundService
         var result = new ExecutionResult(taskEntity.Id);
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var task = scope.ServiceProvider.GetRequiredKeyedService<ISyncTask>(taskEntity.Name);
             result.Start();
             try
@@ -112,12 +98,12 @@ public class TaskExecutorBackgroundService : BackgroundService
                 result.End();
             }
 
+            result.Counter.Add(task.EntitiesCounter);
+
             if (!result.Success)
             {
                 _logger.LogError("Task {TaskName} failed with error: {ErrorMessage}", taskEntity.Name, result.ErrorMessage);
             }
-
-            result.AddEntitiesUpdated(context);
         }
 
         await UpdateTask(result, cancellationToken);
@@ -128,8 +114,7 @@ public class TaskExecutorBackgroundService : BackgroundService
         await using var scope = _serviceProvider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
 
-        var taskEntity = await context.Tasks
-            .FirstOrDefaultAsync(t => t.Id == result.TaskId, cancellationToken: cancellationToken);
+        var taskEntity = await context.Tasks.FirstOrDefaultAsync(t => t.Id == result.TaskId, cancellationToken: cancellationToken);
 
         if (taskEntity == null)
         {
@@ -139,9 +124,9 @@ public class TaskExecutorBackgroundService : BackgroundService
         taskEntity.Executions.Add(new TaskExecutionEntity(
             taskEntity.Id,
             result.Success,
-            result.EntitiesUpdated,
-            result.EntitiesCreated,
-            result.EntitiesDeleted,
+            result.Counter.EntitiesUpdated,
+            result.Counter.EntitiesCreated,
+            result.Counter.EntitiesDeleted,
             result.StartTime,
             result.EndTime,
             result.Duration,

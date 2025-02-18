@@ -10,97 +10,98 @@ public class ItemsSyncTask : ISyncTask
 {
     private const int BatchSize = 100;
 
-    private readonly DatabaseContext _context;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IMediator _mediator;
     private readonly ILogger<AchievementsSyncTask> _logger;
 
-    public ItemsSyncTask(DatabaseContext context, IMediator mediator, ILogger<AchievementsSyncTask> logger)
+    public ItemsSyncTask(IServiceProvider serviceProvider, IMediator mediator, ILogger<AchievementsSyncTask> logger)
     {
-        _context = context;
+        _serviceProvider = serviceProvider;
         _mediator = mediator;
         _logger = logger;
     }
+
+    public EntitiesCounter EntitiesCounter { get; } = new();
 
     public async Task Run(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Synchronizing items");
 
-        for (int offset = 0;; offset += BatchSize)
+        for (int offset = 0; await FetchBatch(offset, cancellationToken) && !cancellationToken.IsCancellationRequested; offset += BatchSize) ;
+
+        _logger.LogInformation("Items synchronized");
+    }
+
+    private async Task<bool> FetchBatch(int offset, CancellationToken cancellationToken = default)
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        await using var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        context.Counter = EntitiesCounter;
+
+        _logger.LogInformation("Fetching items {Start} to {End}", offset, offset + BatchSize);
+
+        var items = (
+            await _mediator.Send(new ItemsClientRequest() { Limit = BatchSize, Offset = offset }, cancellationToken)
+        ).Items;
+
+        if (items.Count == 0)
         {
-            if (cancellationToken.IsCancellationRequested)
+            return false;
+        }
+
+        var itemIds = items
+            .Select(e => e.Id)
+            .ToHashSet();
+
+        var itemEntities = await context
+            .Items
+            .AsSplitQuery()
+            .Include(e => e.Types)
+            .Where(e => itemIds.Contains(e.Id))
+            .ToDictionaryAsync(e => e.Id, cancellationToken: cancellationToken);
+
+        var itemTypes = await context
+            .ItemTypes
+            .AsSplitQuery()
+            .ToListAsync(cancellationToken);
+
+        foreach (var item in items)
+        {
+            if (item.ConflictingSlotIds.Length > 1)
             {
-                break;
+                _logger.LogWarning("Conflicting slot ids are not supported, found {Count} conflicting slot ids for item {Key}",
+                    item.ConflictingSlotIds.Length, item.Id);
             }
 
-            _logger.LogInformation("Fetching items {Start} to {End}", offset, offset + BatchSize);
-            var items = (
-                await _mediator.Send(new ItemsClientRequest() { Limit = BatchSize, Offset = offset }, cancellationToken)
-            ).Items;
-
-            if (items.Count == 0)
+            if (itemEntities.TryGetValue(item.Id, out var itemEntity))
             {
-                break;
+                itemEntity.Update(item);
+            }
+            else
+            {
+                itemEntity = new ItemEntity(item);
+                context.Items.Add(itemEntity);
             }
 
-            var itemIds = items
-                .Select(e => e.Id)
-                .ToHashSet();
-
-            var itemEntities = await _context
-                .Items
-                .AsSplitQuery()
-                .Include(e => e.Types)
-                .Where(e => itemIds.Contains(e.Id))
-                .ToDictionaryAsync(e => e.Id, cancellationToken: cancellationToken);
-
-            foreach (var item in items)
+            foreach (var type in item.Types)
             {
-                if (item.ConflictingSlotIds.Length > 1)
+                if (itemEntity.Types.Any(x => x.Name == type))
                 {
-                    _logger.LogWarning("Conflicting slot ids are not supported, found {Count} conflicting slot ids for item {Key}",
-                        item.ConflictingSlotIds.Length, item.Id);
+                    continue;
                 }
 
-                if (itemEntities.TryGetValue(item.Id, out var itemEntity))
+                var typeEntity = itemTypes.FirstOrDefault(x => x.Name == type);
+                if (typeEntity == null)
                 {
-                    itemEntity.Update(item);
-                }
-                else
-                {
-                    itemEntity = new ItemEntity(item);
-                    _context.Items.Add(itemEntity);
+                    typeEntity = new ItemTypeEntity(type);
+                    itemTypes.Add(typeEntity);
                 }
 
-                foreach (var type in item.Types)
-                {
-                    if (itemEntity.Types.Any(x => x.Name == type))
-                    {
-                        continue;
-                    }
-                    
-                    var typeEntity = _context.ItemTypes.Local.FirstOrDefault(x => x.Name == type);
-                    if (typeEntity != null)
-                    {
-                        itemEntity.Types.Add(typeEntity);
-                    }
-                    else
-                    {
-                        typeEntity = new ItemTypeEntity(type);
-                        _context.ItemTypes.Add(typeEntity);
-                        itemEntity.Types.Add(typeEntity);
-                    }
-                }
-            }
-
-            await _context.SaveChangesAsync();
-            _context.ChangeTracker.Clear();
-
-            if (items.Count < BatchSize)
-            {
-                break;
+                itemEntity.Types.Add(typeEntity);
             }
         }
 
-        _logger.LogInformation("Items synchronized");
+        await context.SaveChangesAsync(cancellationToken);
+        return items.Count == BatchSize;
     }
 }

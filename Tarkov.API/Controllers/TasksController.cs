@@ -41,7 +41,7 @@ public class TasksController : ControllerBase
         var command = new ScheduledTaskCommand()
         {
             TaskId = taskId,
-            Body = new() { ScheduledTime = DateTime.UtcNow + TimeSpan.FromSeconds(5) }
+            Body = new() { ScheduledTime = DateTime.UtcNow }
         };
 
         await _mediator.Send(command);
