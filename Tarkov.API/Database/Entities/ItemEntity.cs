@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Tarkov.API.Application.Client.Queries;
+using Tarkov.API.Application.Models;
+using Tarkov.API.Database.Enumeration;
 
 namespace Tarkov.API.Database.Entities;
 
@@ -181,5 +183,47 @@ public class ItemEntity : IMutableEntity
 
         if (Updated != data.Updated)
             Updated = data.Updated;
+    }
+    
+    public ItemData AsData(LanguageCode lang)
+    {
+        var nameTranslation = Translations.FirstOrDefault(t => t.Language == lang && t.Field == ItemTranslationEntityField.Name);
+        var descriptionTranslation = Translations.FirstOrDefault(t => t.Language == lang && t.Field == ItemTranslationEntityField.Description);
+
+        return new ItemData
+        {
+            Id = Id,
+            Name = nameTranslation?.Value ?? string.Empty,
+            Description = descriptionTranslation?.Value ?? string.Empty,
+            ShortName = ShortName,
+            NormalizedName = NormalizedName,
+            WikiLink = WikiLink,
+            IconLink = IconLink,
+            IconLinkFallback = IconLinkFallback,
+            ImageLink = ImageLink,
+            ImageLinkFallback = ImageLinkFallback,
+            Image512pxLink = Image512pxLink,
+            Image8xLink = Image8xLink,
+            BaseImageLink = BaseImageLink,
+            GridImageLink = GridImageLink,
+            GridImageLinkFallback = GridImageLinkFallback,
+            InspectImageLink = InspectImageLink,
+            Link = Link,
+            BasePrice = BasePrice,
+            BsgCategoryId = BsgCategoryId,
+            Height = Height,
+            Width = Width,
+            Weight = Weight,
+            AccuracyModifier = AccuracyModifier,
+            RecoilModifier = RecoilModifier,
+            ErgonomicsModifier = ErgonomicsModifier,
+            Velocity = Velocity,
+            Loudness = Loudness,
+            BlocksHeadphones = BlocksHeadphones,
+            HasGrid = HasGrid,
+            Types = Types.Select(t => t.Name).ToArray(),
+            BackgroundColor = BackgroundColor,
+            Updated = Updated
+        };
     }
 }
